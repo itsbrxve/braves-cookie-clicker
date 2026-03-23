@@ -37,6 +37,15 @@ if (localStorage.getItem('656d706c6f79656573') != null) {
 
 let employee_bonus = employees**2 + 200*employees + 250;
 
+let bakeries;
+if (localStorage.getItem('62616b6572696573') != null) {
+    bakeries = parseInt(localStorage.getItem('62616b6572696573'));
+} else {
+    bakeries = 1;
+}
+
+let bakery_cost = 100*(bakeries-1)**3 + 500*(bakeries-1)**2 + 3000*(bakeries-1) + 1000;
+
 const RES_X = 600;
 const RES_Y = 480;
 
@@ -96,10 +105,22 @@ function save() {
     localStorage.setItem('636f6f6b696573', cookies);
     localStorage.setItem('65717569706d656e74', equipment_lvl);
     localStorage.setItem('656d706c6f79656573', employees);
+    localStorage.setItem('62616b6572696573', bakeries);
     
     localStorage.setItem('cookie_count', cookies);
     localStorage.setItem('equipment', equipment_lvl);
-    localStorage.setItem('workers', employees)
+    localStorage.setItem('workers', employees);
+    localStorage.setItem('bakeries', bakeries);
+}
+
+// clear everything
+function wipe() {
+    cookies = 0;
+    equipment_lvl = 1;
+    employees = 0;
+    bakeries = 1;
+    ms_per_employee = Infinity;
+    localStorage.clear();
 }
 
 window.addEventListener('beforeunload', save);
@@ -266,7 +287,7 @@ function draw() {
     textStyle(NORMAL);
 
     if (employees != 0) {
-        ms_per_employee = 1000 / employees;
+        ms_per_employee = 1000 / (employees*bakeries);
     }
     if (employees <= getTargetFrameRate()) {
         if ((millis() - last_ms_for_employee) - ms_per_employee >= 0) {
@@ -275,6 +296,7 @@ function draw() {
         }
     } else {
         let additive = employees / getTargetFrameRate();
+        additive *= bakeries;
         let integer_additive = floor(additive);
         let decimal_additive = floor(additive*100) - integer_additive*100;
 
@@ -388,19 +410,21 @@ function draw() {
     textStyle(NORMAL);
     text(`upgrade equipment (lv. ${equipment_lvl})`, 50, shop_button.ty+100);
     text(`hire employee (${employees})`, 50, shop_button.ty+190);
+    text(`open a new location (${bakeries})`, 50, shop_button.ty+280);
     textStyle(ITALIC); // descriptions are offset 14 from titles
     textSize(14);
     textWrap(WORD);
     text('get better cooking equipment to help you make more cookies per click!', 50, shop_button.ty+114, 350);
     text('get some help to make cookies, allows you to make cookies without doing it yourself.', 50, shop_button.ty+204, 350);
+    text('open another bakery. expensive, but MULTIPLIES the amount of cookies you can make!', 50, shop_button.ty+294, 350);
     strokeWeight(1);
-    line(50, shop_button.ty+70, RES_X-50, shop_button.ty+70);
     line(50, shop_button.ty+250, RES_X-50, shop_button.ty+250);
     line(50, shop_button.ty+160, RES_X-50, shop_button.ty+160);
-    line(400, shop_button.ty+70, 400, shop_button.ty+250);
+    line(400, shop_button.ty+70, 400, shop_button.ty+340);
     
     let equipment_button_color = 0;
     let employee_button_color = 0;
+    let bakery_button_color = 0;
 
     if (
         420 <= mouseX &&
@@ -424,10 +448,23 @@ function draw() {
         employee_button_color = bg_color;
     }
 
+    if (
+        420 <= mouseX &&
+        mouseX <= 530 &&
+        shop_button.ty+275 <= mouseY &&
+        mouseY <= shop_button.ty+320
+    ) {
+        bakery_button_color = 255 - bg_color;
+    } else {
+        bakery_button_color = bg_color;
+    }
+
     fill(equipment_button_color);
     rect(420, shop_button.ty+95, 110, 45);
     fill(employee_button_color);
     rect(420, shop_button.ty+185, 110, 45);
+    fill(bakery_button_color);
+    rect(420, shop_button.ty+275, 110, 45);
 
     strokeWeight(0);
     textStyle(NORMAL);
@@ -437,6 +474,8 @@ function draw() {
     text(`${suffix(equipment_price)}🍪`, 476, shop_button.ty+124);
     fill(255 - employee_button_color);
     text(`${suffix(employee_bonus)}🍪`, 476, shop_button.ty+215);
+    fill(255 - bakery_button_color);
+    text(`${suffix(bakery_cost)}🍪`, 476, shop_button.ty+305);
 
     if (menu_open == shop_button) {
         if (shop_button.y > 50) {
@@ -459,7 +498,7 @@ function mousePressed() {
     if (mouseButton == LEFT) {
         // if cookie cliked
         if (hyp <= hitbox_diameter/2 && menu_open == null && clicks.length < 15) {
-            cookies += equipment_lvl;
+            cookies += equipment_lvl*bakeries;
             bg_color_drain = 0.5;
             bg_color += 5;
             play_sound(click_sound, 0.5);
@@ -528,6 +567,19 @@ function mousePressed() {
                 employees++;
                 cookies -= employee_bonus;
                 employee_bonus = employees**2 + 200*employees + 250;
+            }
+
+            // open new location button
+            if (
+                420 <= mouseX &&
+                mouseX <= 530 &&
+                shop_button.ty+275 <= mouseY &&
+                mouseY <= shop_button.ty+320 &&
+                cookies >= bakery_cost
+            ) {
+                bakeries++;
+                cookies -= bakery_cost;
+                bakery_cost = bakery_cost = 100*(bakeries-1)**3 + 500*(bakeries-1)**2 + 3000*(bakeries-1) + 1000;
             }
         }
     }
